@@ -26,4 +26,4 @@ def get_names():
 def init_dataset(name, *args, **kwargs):
     if name not in __factory.keys():
         raise KeyError("Unknown datasets: {}".format(name))
-    return __factory[name](*args, **kwargs)
+    return __factory[name](*args, **kwargs) #dataset object

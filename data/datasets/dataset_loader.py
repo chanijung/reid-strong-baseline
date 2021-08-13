@@ -26,7 +26,7 @@ def read_image(img_path):
 
 
 class ImageDataset(Dataset):
-    """Image Person ReID Dataset"""
+    """Image Person ReID Dataset (Map-style dataset)"""
 
     def __init__(self, dataset, transform=None):
         self.dataset = dataset
