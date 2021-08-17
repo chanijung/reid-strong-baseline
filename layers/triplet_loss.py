@@ -5,6 +5,7 @@
 """
 import torch
 from torch import nn
+import numpy as np
 
 
 def normalize(x, axis=-1):
@@ -35,7 +36,7 @@ def euclidean_dist(x, y):
     return dist
 
 
-def hard_example_mining(dist_mat, labels, return_inds=False):
+def hard_example_mining(dist_mat, labels, camids, return_inds=False):
     """For each anchor, find the hardest positive and negative sample.
     Args:
       dist_mat: pytorch Variable, pair wise distance between samples, shape [N, N]
@@ -60,25 +61,43 @@ def hard_example_mining(dist_mat, labels, return_inds=False):
     is_pos = labels.expand(N, N).eq(labels.expand(N, N).t())
     is_neg = labels.expand(N, N).ne(labels.expand(N, N).t())
 
+    # For testing the effect of camid bias
+    # dist_ap_prev, _ = torch.max(
+    #     dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
+    # dist_an_prev, _ = torch.min(
+    #     dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+
+    # modify distance matrix
+    camid_col = camids.reshape((64,1))
+    camid_row = camid_col.reshape((1,64))
+    cam_mat = camid_col == camid_row
+
+
+    bias = torch.mul(cam_mat.int(), torch.std(dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True))
+    dist_pos = dist_mat - bias
+    dist_neg = dist_mat + bias
+
     # `dist_ap` means distance(anchor, positive)
     # both `dist_ap` and `relative_p_inds` with shape [N, 1]
     dist_ap, relative_p_inds = torch.max(
-        dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
+        dist_pos[is_pos].contiguous().view(N, -1), 1, keepdim=True)
 
     # `dist_an` means distance(anchor, negative)
     # both `dist_an` and `relative_n_inds` with shape [N, 1]
     dist_an, relative_n_inds = torch.min(
-        dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+        dist_neg[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+
+    # Testing
+    # print(f'pos changed {torch.sum((dist_ap_prev != dist_ap).int())}')
+    # print(f'neg changed {torch.sum((dist_an_prev != dist_an).int())}')
+    
     # shape [N]
     dist_ap = dist_ap.squeeze(1)
     dist_an = dist_an.squeeze(1)
 
-    # test(chani)
-    dist_pos = dist_mat[is_pos].contiguous().view(N, -1)
-    dist_neg = dist_mat[is_neg].contiguous().view(N, -1)
-    # expect 64*1
-    print(f'dist_pos mean {torch.mean(dist_pos, 1, keepdim=True)} var {torch.var(dist_pos, 1, keepdim=True)}')
-    print(f'dist_neg mean {torch.mean(dist_neg, 1, keepdim=True)} var {torch.var(dist_neg, 1, keepdim=True)}')
+
+    # print(f'dist_pos mean {torch.mean(dist_pos, 1, keepdim=True)} var {torch.var(dist_pos, 1, keepdim=True)}')
+    # print(f'dist_neg mean {torch.mean(dist_neg, 1, keepdim=True)} var {torch.var(dist_neg, 1, keepdim=True)}')
     
 
     if return_inds:
@@ -111,12 +130,12 @@ class TripletLoss(object):
         else:
             self.ranking_loss = nn.SoftMarginLoss()
 
-    def __call__(self, global_feat, labels, normalize_feature=False):
+    def __call__(self, global_feat, labels, camids, normalize_feature=False):
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
         dist_mat = euclidean_dist(global_feat, global_feat)
         dist_ap, dist_an = hard_example_mining(
-            dist_mat, labels)
+            dist_mat, labels, camids)
         y = dist_an.new().resize_as_(dist_an).fill_(1)
         if self.margin is not None:
             loss = self.ranking_loss(dist_an, dist_ap, y)
