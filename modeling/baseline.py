@@ -129,7 +129,7 @@ class Baseline(nn.Module):
             self.base = resnet50_ibn_a(last_stride)
 
         if pretrain_choice == 'imagenet':
-            self.base.load_param(model_path)
+            self.base.load_param(model_path)  
             print('Loading pretrained ImageNet model......')
 
         self.gap = nn.AdaptiveAvgPool2d(1)
@@ -172,8 +172,10 @@ class Baseline(nn.Module):
                 return global_feat
 
     def load_param(self, trained_path):
-        param_dict = torch.load(trained_path)
-        for i in param_dict:
-            if 'classifier' in i:
-                continue
-            self.state_dict()[i].copy_(param_dict[i])
+            param_dict = torch.load(trained_path)
+            for k, v in param_dict.state_dict().items():
+                # print(i)
+                if 'classifier' in k:
+                    # print(i[0])
+                    continue
+                self.state_dict()[k].copy_(param_dict.state_dict()[k])

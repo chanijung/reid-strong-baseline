@@ -13,6 +13,8 @@ from ignite.handlers import ModelCheckpoint, Timer
 from ignite.metrics import RunningAverage
 
 from utils.reid_metric import R1_mAP
+# from ignite.contrib.handlers import TensorboardLogger
+# from ignite.contrib.handlers.tensorboard_logger import *
 
 global ITER
 ITER = 0
@@ -54,7 +56,7 @@ def create_supervised_trainer(model, optimizer, loss_fn,
     return Engine(_update)
 
 
-def create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cetner_loss_weight,
+def create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cetner_loss_weight, k, m,
                               device=None):
     """
     Factory function for creating a trainer for supervised models
@@ -79,14 +81,11 @@ def create_supervised_trainer_with_center(model, center_criterion, optimizer, op
         optimizer.zero_grad()
         optimizer_center.zero_grad()
         img, target, camids = batch
-        # print(f'camids {camids}')
-        # print(f'len {len(camids)}')
-        # print(f'type {type(camids)}')     #tuple of lenth 64
         img = img.to(device) if torch.cuda.device_count() >= 1 else img
         camids = torch.tensor(camids).to(device) if torch.cuda.device_count() >= 1 else img
         target = target.to(device) if torch.cuda.device_count() >= 1 else target
         score, feat = model(img)
-        loss = loss_fn(score, feat, target, camids)
+        loss = loss_fn(score, feat, target, camids, engine.state.epoch, k, m)
         # print("Total loss is {}, center loss is {}".format(loss, center_criterion(feat, target)))
         loss.backward()
         optimizer.step()
@@ -223,7 +222,8 @@ def do_train_with_center(
         scheduler,
         loss_fn,
         num_query,
-        start_epoch
+        start_epoch,
+        k, m
 ):
     log_period = cfg.SOLVER.LOG_PERIOD
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
@@ -234,7 +234,7 @@ def do_train_with_center(
 
     logger = logging.getLogger("reid_baseline.train")
     logger.info("Start training")
-    trainer = create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cfg.SOLVER.CENTER_LOSS_WEIGHT, device=device)
+    trainer = create_supervised_trainer_with_center(model, center_criterion, optimizer, optimizer_center, loss_fn, cfg.SOLVER.CENTER_LOSS_WEIGHT, k, m, device=device )
     evaluator = create_supervised_evaluator(model, metrics={'r1_mAP': R1_mAP(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)}, device=device)
     checkpointer = ModelCheckpoint(output_dir, cfg.MODEL.NAME, checkpoint_period, n_saved=10, require_empty=False)
     timer = Timer(average=True)
@@ -291,4 +291,29 @@ def do_train_with_center(
             for r in [1, 5, 10]:
                 logger.info("CMC curve, Rank-{:<3}:{:.1%}".format(r, cmc[r - 1]))
 
+    ## Plot training result
+    
+    # # Define a Tensorboard logger
+    # tb_logger = TensorboardLogger(log_dir=f"log/k{k}_m{m}/plot")
+
+    # # Attach handler to plot trainer's loss every 100 iterations
+    # tb_logger.attach_output_handler(
+    #     trainer,
+    #     event_name=Events.ITERATION_COMPLETED(every=100),
+    #     tag="training",
+    #     output_transform=lambda loss: {"batchloss": loss},
+    # )
+
+    # # Attach handler to dump evaluator's metrics every epoch completed
+    # tb_logger.attach_output_handler(
+    #     evaluator,
+    #     event_name=Events.EPOCH_COMPLETED,
+    #     tag="training",
+    #     metric_names="all",
+    #     global_step_transform=tensorboard_logger.global_step_from_engine(trainer),
+    # )
+    
+
     trainer.run(train_loader, max_epochs=epochs)
+    
+    # tb_logger.close()

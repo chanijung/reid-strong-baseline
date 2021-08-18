@@ -65,7 +65,7 @@ def make_loss_with_center(cfg, num_classes):    # modified by gu
         xent = CrossEntropyLabelSmooth(num_classes=num_classes)     # new add by luo
         print("label smooth on, numclasses:", num_classes)
 
-    def loss_func(score, feat, target, camids):
+    def loss_func(score, feat, target, camids, epoch, k, m):
         if cfg.MODEL.METRIC_LOSS_TYPE == 'center':
             if cfg.MODEL.IF_LABELSMOOTH == 'on':
                 return xent(score, target) + \
@@ -77,11 +77,11 @@ def make_loss_with_center(cfg, num_classes):    # modified by gu
         elif cfg.MODEL.METRIC_LOSS_TYPE == 'triplet_center':
             if cfg.MODEL.IF_LABELSMOOTH == 'on':
                 return xent(score, target) + \
-                        triplet(feat, target, camids)[0] + \
+                        triplet(feat, target, camids, epoch, k, m)[0] + \
                         cfg.SOLVER.CENTER_LOSS_WEIGHT * center_criterion(feat, target)
             else:
                 return F.cross_entropy(score, target) + \
-                        triplet(feat, target, camids)[0] + \
+                        triplet(feat, target, camids, epoch, k, m)[0] + \
                         cfg.SOLVER.CENTER_LOSS_WEIGHT * center_criterion(feat, target)
 
         else:

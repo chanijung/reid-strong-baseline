@@ -58,7 +58,7 @@ def main():
 
     train_loader, val_loader, num_query, num_classes = make_data_loader(cfg)
     model = build_model(cfg, num_classes)
-    model.load_param(cfg.TEST.WEIGHT)
+    model.load_param(cfg.TEST.WEIGHT)     #for camid triplet mining
 
     inference(cfg, model, val_loader, num_query)
 

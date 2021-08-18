@@ -36,7 +36,7 @@ def euclidean_dist(x, y):
     return dist
 
 
-def hard_example_mining(dist_mat, labels, camids, return_inds=False):
+def hard_example_mining(dist_mat, labels, camids, epoch, k, m, return_inds=False):
     """For each anchor, find the hardest positive and negative sample.
     Args:
       dist_mat: pytorch Variable, pair wise distance between samples, shape [N, N]
@@ -62,20 +62,26 @@ def hard_example_mining(dist_mat, labels, camids, return_inds=False):
     is_neg = labels.expand(N, N).ne(labels.expand(N, N).t())
 
     # For testing the effect of camid bias
-    # dist_ap_prev, _ = torch.max(
-    #     dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
-    # dist_an_prev, _ = torch.min(
-    #     dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
+    dist_ap_prev, _ = torch.max(
+        dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True)
+    dist_an_prev, _ = torch.min(
+        dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True)
 
     # modify distance matrix
     camid_col = camids.reshape((64,1))
     camid_row = camid_col.reshape((1,64))
     cam_mat = camid_col == camid_row
 
+    # print(f'epoch {epoch} k {k} m {m}')
+ 
 
-    bias = torch.mul(cam_mat.int(), torch.std(dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True))
-    dist_pos = dist_mat - bias
-    dist_neg = dist_mat + bias
+    pos_bias = k*torch.mul(cam_mat.int(), torch.std(dist_mat[is_pos].contiguous().view(N, -1), 1, keepdim=True))
+    neg_bias = k*torch.mul(cam_mat.int(), torch.std(dist_mat[is_neg].contiguous().view(N, -1), 1, keepdim=True))
+
+    # print(f'epoch {epoch}')
+    # print(f'bias {pos_bias/(1+m*epoch)}')
+    dist_pos = dist_mat - pos_bias/(1+m*epoch)
+    dist_neg = dist_mat + neg_bias/(1+m*epoch)
 
     # `dist_ap` means distance(anchor, positive)
     # both `dist_ap` and `relative_p_inds` with shape [N, 1]
@@ -130,12 +136,12 @@ class TripletLoss(object):
         else:
             self.ranking_loss = nn.SoftMarginLoss()
 
-    def __call__(self, global_feat, labels, camids, normalize_feature=False):
+    def __call__(self, global_feat, labels, camids, epoch, k, m, normalize_feature=False):
         if normalize_feature:
             global_feat = normalize(global_feat, axis=-1)
         dist_mat = euclidean_dist(global_feat, global_feat)
         dist_ap, dist_an = hard_example_mining(
-            dist_mat, labels, camids)
+            dist_mat, labels, camids, epoch, k, m)
         y = dist_an.new().resize_as_(dist_an).fill_(1)
         if self.margin is not None:
             loss = self.ranking_loss(dist_an, dist_ap, y)

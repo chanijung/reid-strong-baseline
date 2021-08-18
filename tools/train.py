@@ -22,7 +22,7 @@ from solver import make_optimizer, make_optimizer_with_center, WarmupMultiStepLR
 from utils.logger import setup_logger
 
 
-def train(cfg):
+def train(cfg, k, m):
     # prepare dataset
     train_loader, val_loader, num_query, num_classes = make_data_loader(cfg)
 
@@ -110,7 +110,8 @@ def train(cfg):
             scheduler,      # modify for using self trained model
             loss_func,
             num_query,
-            start_epoch     # add for using self trained model
+            start_epoch,
+            k, m     # add for using self trained model
         )
     else:
         print("Unsupported value for cfg.MODEL.IF_WITH_CENTER {}, only support yes or no!\n".format(cfg.MODEL.IF_WITH_CENTER))
@@ -120,6 +121,12 @@ def main():
     parser = argparse.ArgumentParser(description="ReID Baseline Training")
     parser.add_argument(
         "--config_file", default="", help="path to config file", type=str
+    )
+    parser.add_argument(
+        "-k", default=1, help="initial multiplier of cam bias in triplet mining", type=int
+    )
+    parser.add_argument(
+        "-m", default=0.2, help="decay parameter of cam bias in triplet mining", type=float
     )
     parser.add_argument("opts", help="Modify config options using the command-line", default=None,
                         nargs=argparse.REMAINDER)
@@ -132,6 +139,9 @@ def main():
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
+
+    print(f'k {args.k}')
+    print(f'm {args.m}')
 
     output_dir = cfg.OUTPUT_DIR
     if output_dir and not os.path.exists(output_dir):
@@ -151,7 +161,7 @@ def main():
     if cfg.MODEL.DEVICE == "cuda":
         os.environ['CUDA_VISIBLE_DEVICES'] = cfg.MODEL.DEVICE_ID    # new add by gu
     cudnn.benchmark = True
-    train(cfg)
+    train(cfg, args.k, args.m)
 
 
 if __name__ == '__main__':
