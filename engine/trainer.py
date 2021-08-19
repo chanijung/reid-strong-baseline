@@ -85,7 +85,7 @@ def create_supervised_trainer_with_center(model, center_criterion, optimizer, op
         camids = torch.tensor(camids).to(device) if torch.cuda.device_count() >= 1 else img
         target = target.to(device) if torch.cuda.device_count() >= 1 else target
         score, feat = model(img)
-        loss = loss_fn(score, feat, target, camids, engine.state.epoch, k, m)
+        loss = loss_fn(score, feat, target, camids, engine.state.iteration, k, m)
         # print("Total loss is {}, center loss is {}".format(loss, center_criterion(feat, target)))
         loss.backward()
         optimizer.step()

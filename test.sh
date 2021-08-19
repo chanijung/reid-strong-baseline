@@ -10,9 +10,7 @@
 # with center loss
 # with re-ranking
 
-declare -a Models=("baseline_rep" "k1_m0.1" "k1_m0.2" "k1_m0.3" "k2_m0.1" )
 
-for MODEL in ${Models[@]}
-do
-    python3 tools/test.py --config_file='configs/softmax_triplet_cam_with_center_initial.yml' MODEL.DEVICE_ID "('0')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('after')" TEST.FEAT_NORM "('yes')" MODEL.PRETRAIN_CHOICE "('self')" TEST.RE_RANKING "('yes')" TEST.WEIGHT "('log/train/${MODEL}/resnet50_model_120.pth')" OUTPUT_DIR "('log/test/${MODEL}')"
-done
+K=5
+M=0.1
+python3 tools/test.py --config_file='configs/softmax_triplet_cam_with_center_initial.yml' MODEL.DEVICE_ID "('0')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('after')" TEST.FEAT_NORM "('yes')" MODEL.PRETRAIN_CHOICE "('self')" TEST.RE_RANKING "('yes')" TEST.WEIGHT "('log/train/k${K}_m${M}/resnet50_model_120.pth')" OUTPUT_DIR "('log/test/k${K}_m${M}')"
