@@ -8,7 +8,7 @@ This work is about improving the person re-identification baseline model introdu
 by adding a new triplet mining technique
 that uses camera-ID label of the training data.
 
-The codes are expanded on a [reid-strong-baseline](https://github.com/michuanhaohao/reid-strong-baseline) (michuanhaohao, 2020.04.23).
+The codes and this document are expanded on a [reid-strong-baseline](https://github.com/michuanhaohao/reid-strong-baseline) (michuanhaohao, 2020.04.23).
 
 ## Bag of Tricks and A Strong ReID Baseline
 
@@ -136,7 +136,7 @@ The designed architecture follows this guide [PyTorch-Project-Template](https://
     - [yacs](https://github.com/rbgirshick/yacs)
 -->
 
-4. Prepare dataset
+2. Prepare dataset
 
     Create a directory to store reid datasets under this repo or outside this repo. Remember to set your path to the root of the dataset in `config/defaults.py` for all training and testing or set in every single config file in `configs/` or set in every single command.
 
@@ -180,7 +180,7 @@ The designed architecture follows this guide [PyTorch-Project-Template](https://
             	......
     ```
 
-5. Prepare pretrained model if you don't have
+3. Prepare pretrained model if you don't have
 
     ResNet is used in this work, but you can also try with different models below.
 
@@ -205,7 +205,7 @@ The designed architecture follows this guide [PyTorch-Project-Template](https://
     （4）Load your self-trained model
     If you want to continue your train process based on your self-trained model, you can change the configuration `PRETRAIN_CHOICE` from 'imagenet' to 'self' and set the `PRETRAIN_PATH` to your self-trained model. We offer `Experiment-pretrain_choice-all_tricks-tri_center-market.sh` as an example. 
 
-6. If you want to know the detailed configurations and their meaning, please refer to `config/defaults.py`. If you want to set your own parameters, you can follow our method: create a new yml file, then set your own parameters.  Add `--config_file='configs/your yml file'` int the commands described below, then our code will merge your configuration. automatically.
+4. If you want to know the detailed configurations and their meaning, please refer to `config/defaults.py`. If you want to set your own parameters, you can follow our method: create a new yml file, then set your own parameters.  Add `--config_file='configs/your yml file'` int the commands described below, then our code will merge your configuration. automatically.
 
 ## Train
 You can run these commands in  `.sh ` files for training different datasets of differernt loss.  You can also directly run code `sh *.sh` to run our demo after your custom modification.
