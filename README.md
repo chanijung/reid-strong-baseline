@@ -1,4 +1,16 @@
-# Bag of Tricks and A Strong ReID Baseline
+# Deep Person Re-Identification with Camera-Label Based Batch Hard Mining
+
+This is the code for the report *Deep Person Re-Identification with Camera-Label Based Batch Hard Mining*. The report is also uploaded in this repository as a pdf.
+
+This work is about improving the person re-identification baseline model introduced in
+*A Strong Baseline and Batch Normalization Neck for Deep Person Re-identification
+(Luo et al.,2019)*
+by adding a new triplet mining technique
+that uses camera-ID label of the training data.
+
+The codes are expanded on a [reid-strong-baseline](https://github.com/michuanhaohao/reid-strong-baseline) (michuanhaohao, 2020.04.23).
+
+## Bag of Tricks and A Strong ReID Baseline
 
 Bag of Tricks and A Strong Baseline for Deep Person Re-identification. CVPRW2019, Oral.
 
@@ -9,6 +21,7 @@ A Strong Baseline and Batch Normalization Neck for Deep Person Re-identification
 [[Slides]](https://drive.google.com/open?id=1h9SgdJenvfoNp9PTUxPiz5_K5HFCho-V)
 [[Poster]](https://drive.google.com/open?id=1izZYAwylBsrldxSMqHCH432P6hnyh1vR)
 
+<!--
 ### News! Based on the strong baseline, we won 3rd place on AICity Challenge 2020. [[PDF]](https://arxiv.org/pdf/2004.10547.pdf) [[Code]](https://github.com/heshuting555/AICITY2020_DMT_VehicleReID)
 
 ### News! Our journal version has been accepted by IEEE Transactions on Multimedia.
@@ -107,19 +120,21 @@ In the future, we will
 [model(Market1501)](https://drive.google.com/open?id=1hn0sXLZ5yJcxtmuY-ItQfYD7hBtHwt7A)
 
 [model(DukeMTMC-reID)](https://drive.google.com/open?id=1LARvQe-gUbflbanidUM0keKmHoKTpLUj)
+-->
 
 ## Get Started
 The designed architecture follows this guide [PyTorch-Project-Template](https://github.com/L1aoXingyu/PyTorch-Project-Template), you can check each folder's purpose by yourself.
 
-1. `cd` to folder where you want to download this repo
-
-2. Run `git clone https://github.com/michuanhaohao/reid-strong-baseline.git`
-
-3. Install dependencies:
+1. Install dependencies:
+    ```
+    pip3 install -r requirements.txt
+    ```
+<!-- 
     - [pytorch>=0.4](https://pytorch.org/)
     - torchvision
     - [ignite=0.1.2](https://github.com/pytorch/ignite) (Note: V0.2.0 may result in an error)
     - [yacs](https://github.com/rbgirshick/yacs)
+-->
 
 4. Prepare dataset
 
@@ -132,9 +147,16 @@ The designed architecture follows this guide [PyTorch-Project-Template](https://
     mkdir data
     ```
 
-    （1）Market1501
+    Although only Market1501 is used in this work, you can try the same experiments with different datasets below.
 
-    * Download dataset to `data/` from http://www.liangzheng.org/Project/project_reid.html
+    （1）Market1501
+    
+    * Download dataset to data/ using:
+    ```
+    wget http://188.138.127.15:81/Datasets/Market-1501-v15.09.15.zip data/
+    unzip <path/to/>/Market-1501-v15.09.15.zip
+    ```
+
     * Extract dataset and rename to `market1501`. The data structure would like:
 
     ```bash
@@ -159,6 +181,8 @@ The designed architecture follows this guide [PyTorch-Project-Template](https://
     ```
 
 5. Prepare pretrained model if you don't have
+
+    ResNet is used in this work, but you can also try with different models below.
 
     （1）ResNet
 
@@ -186,37 +210,47 @@ The designed architecture follows this guide [PyTorch-Project-Template](https://
 ## Train
 You can run these commands in  `.sh ` files for training different datasets of differernt loss.  You can also directly run code `sh *.sh` to run our demo after your custom modification.
 
-1. Market1501, cross entropy loss + triplet loss
+1. Market1501, cross entropy loss + triplet loss + center loss
 
 ```bash
-python3 tools/train.py --config_file='configs/softmax_triplet.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" OUTPUT_DIR "('your path to save checkpoints and logs')"
+python3 tools/train.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" OUTPUT_DIR "('your path to save checkpoints and logs')" MODEL.PRETRAIN_CHOICE "('self')" MODEL.PRETRAIN_PATH "('/root/.cache/torch/hub/checkpoints/resnet50-0676ba61.pth')"
 ```
 
-2. DukeMTMC-reID, cross entropy loss + triplet loss + center loss
+2. Market1501, cross entropy loss + triplet loss (w/ triplet mining using camera label, hyperparameters k=5 and m=0.1) + center loss
 
+```bash
+python3 tools/train.py -k 5 -m 0.1 $M --config_file='configs/softmax_triplet_cam_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" MODEL.PRETRAIN_CHOICE "('self')" MODEL.PRETRAIN_PATH "('path_to_your_pretrained_model')" OUTPUT_DIR "('your path to save checkpoints and logs')" 
+```
+
+<!--
+3. DukeMTMC-reID, cross entropy loss + triplet loss + center loss
 
 ```bash
 python3 tools/train.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('dukemtmc')" OUTPUT_DIR "('your path to save checkpoints and logs')"
 ```
+  -->
 
 ## Test
 You can test your model's performance directly by running these commands in `.sh ` files after your custom modification. You can also change the configuration to determine which feature of BNNeck is used and whether the feature is normalized (equivalent to use Cosine distance or Euclidean distance) for testing.
 
 Please replace the data path of the model and set the `PRETRAIN_CHOICE` as 'self' to avoid time consuming on loading ImageNet pretrained model.
 
+
 1. Test with Euclidean distance using feature before BN without re-ranking,.
 
 ```bash
-python3 tools/test.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('before')" TEST.FEAT_NORM "('no')" MODEL.PRETRAIN_CHOICE "('self')" TEST.WEIGHT "('your path to trained checkpoints')"
+python3 tools/test.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('before')" TEST.FEAT_NORM "('no')" MODEL.PRETRAIN_CHOICE "('self')" TEST.WEIGHT "('your path to trained checkpoints')" OUTPUT_DIR "('path_to_your_output_dir')"
 ```
+
 2. Test with Cosine distance using feature after BN without re-ranking,.
 
 ```bash
-python3 tools/test.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('after')" TEST.FEAT_NORM "('yes')" MODEL.PRETRAIN_CHOICE "('self')" TEST.WEIGHT "('your path to trained checkpoints')"
+python3 tools/test.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('after')" TEST.FEAT_NORM "('yes')" MODEL.PRETRAIN_CHOICE "('self')" TEST.WEIGHT "('your path to trained checkpoints')" OUTPUT_DIR "('path_to_your_output_dir')"
 ```
-3. Test with Cosine distance using feature after BN with re-ranking
+
+2. Test with Cosine distance using feature after BN with re-ranking
 
 ```bash
-python3 tools/test.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('dukemtmc')" TEST.NECK_FEAT "('after')" TEST.FEAT_NORM "('yes')" MODEL.PRETRAIN_CHOICE "('self')" TEST.RE_RANKING "('yes')" TEST.WEIGHT "('your path to trained checkpoints')"
+python3 tools/test.py --config_file='configs/softmax_triplet_with_center.yml' MODEL.DEVICE_ID "('your device id')" DATASETS.NAMES "('market1501')" TEST.NECK_FEAT "('after')" TEST.FEAT_NORM "('yes')" MODEL.PRETRAIN_CHOICE "('self')" TEST.RE_RANKING "('yes')" TEST.WEIGHT "('your path to trained checkpoints')" OUTPUT_DIR "('path_to_your_output_dir')"
 ```
 
